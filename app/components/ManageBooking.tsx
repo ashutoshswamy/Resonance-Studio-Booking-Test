@@ -68,14 +68,14 @@ function PasswordInput({ value, onChange }: { value: string; onChange: (value: s
   );
 }
 
-export async function signInCustomer(phone: string, name: string, password: string) {
+export async function signInCustomer(phone: string, name: string, _password?: string) {
   const response = await fetch("/api/auth/password", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone, name, password, confirmPassword: password }),
+    body: JSON.stringify({ phone, name }),
   });
   const data = await safeJsonParse(response);
-  if (!response.ok) throw new Error(data.error || "Unable to verify password");
+  if (!response.ok) throw new Error(data.error || "Unable to verify your details");
 }
 
 /** Why a booking can't be changed: hidden (invalid/past), locked (<24h), or "" if allowed. */
@@ -177,9 +177,6 @@ export function PhoneNameSearch({
         </div>
         <Label htmlFor="manage-name">Name</Label>
         <Input id="manage-name" autoComplete="name" value={name} onChange={(e) => onNameChange(e.target.value)} placeholder="Your name" className="h-11 text-base" />
-        <Label htmlFor="manage-password">Password</Label>
-        <PasswordInput value={password} onChange={onPasswordChange} />
-        <p className="text-xs text-muted-foreground">A password is required to view, change, or cancel bookings. <Link href="/forgot-password" className="text-primary underline">Forgot password?</Link></p>
         <p className="text-xs text-muted-foreground">Your mobile number and name are used for WhatsApp booking confirmations and one-day advance reminders.</p>
       </form>
 

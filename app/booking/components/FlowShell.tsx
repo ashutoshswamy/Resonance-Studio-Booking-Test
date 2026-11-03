@@ -35,7 +35,7 @@ export function FlowShell({
   children,
 }: FlowShellProps) {
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-background">
+    <div className="h-[calc(100dvh-var(--contact-bar-h))] flex flex-col overflow-hidden bg-background">
       <header className="flex-shrink-0 px-4 pt-3 pb-2 relative">
         {onExit && (
           <Button

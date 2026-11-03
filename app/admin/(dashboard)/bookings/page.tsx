@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmationMessage, reminderMessage } from "@/lib/whatsapp";
 import { userMessage } from "@/lib/errors";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -1262,51 +1263,7 @@ export default function BookingsManagementPage() {
                               /[^0-9]/g,
                               ""
                             );
-                            const formattedStartTime = formatTime(
-                              selectedBooking.start_time
-                            );
-                            const formattedEndTime = formatTime(
-                              selectedBooking.end_time
-                            );
-
-                            // Date formatting with ordinal
-                            const dateObj = new Date(selectedBooking.date);
-                            const dayName = dateObj.toLocaleDateString('en-GB', { timeZone: "Asia/Kolkata", weekday: 'long' });
-                            const d = dateObj.getUTCDate();
-                            const ordinal = (d > 3 && d < 21) ? 'th' : ['th', 'st', 'nd', 'rd'][d % 10] || 'th';
-                            const monthYear = dateObj.toLocaleDateString('en-GB', { timeZone: "Asia/Kolkata", month: 'long', year: 'numeric' });
-                            const niceDate = `${dayName}, ${d}${ordinal} ${monthYear}`;
-
-                            // Duration calculation
-                            const s = selectedBooking.start_time.split(':').map(Number);
-                            const e = selectedBooking.end_time.split(':').map(Number);
-                            const dur = (e[0] * 60 + e[1] - (s[0] * 60 + s[1])) / 60;
-
-                            const isLive = selectedBooking.session_type === "Live with musicians";
-                            const sessionTypeDisplay = isLive
-                              ? "Live session"
-                              : (selectedBooking.session_type || "Session");
-                            
-                            let sessionDetailsDisplay = "";
-                            if (selectedBooking.session_details && selectedBooking.session_details !== selectedBooking.session_type) {
-                              const prefix = isLive ? " with up to " : " with ";
-                              sessionDetailsDisplay = `${prefix}${selectedBooking.session_details}`;
-                            }
-
-                            const message = `*Reminder - Resonance Studio, Sinhgad Road Branch*
-
-This is to remind you that you have an upcoming booking on ${niceDate} from ${formattedStartTime} to ${formattedEndTime} (${dur} hours) for a ${sessionTypeDisplay}${sessionDetailsDisplay} in ${selectedBooking.studio} with us.
-
-*Please note and inform all your group members:*
-
-Do not park vehicles blocking the society gate
-
-Kindly avoid extended chatting on the society road to maintain a peaceful environment
-
-Strictly no noise after 10:00 pm
-
-We look forward to hosting you.
-See you soon!`;
+                            const message = reminderMessage(selectedBooking);
 
                             const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(
                               message
@@ -1394,79 +1351,7 @@ See you soon!`;
                         // Open the tab inside the click so the browser doesn't block it after the awaits below.
                         const waWindow = window.open("", "_blank");
                         const phone = selectedBooking.phone_number.replace(/[^0-9]/g, "");
-                        const formattedDate = formatDate(selectedBooking.date);
-                        const formattedStartTime = formatTime(selectedBooking.start_time);
-                        const formattedEndTime = formatTime(selectedBooking.end_time);
-
-                        // Fetch loyalty status
-                        let loyaltyMessagePart = "";
-                        try {
-                          const res = await adminFetch(`/api/loyalty/status?phone=${phone}`);
-                          const loyaltyData = await res.json();
-                          if (loyaltyData && !loyaltyData.error) {
-                            const currentHours = Number(loyaltyData.hours || 0);
-                            const target = Number(loyaltyData.target || 50);
-                            const windowEnd = loyaltyData.window_end ? new Date(loyaltyData.window_end).toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: 'numeric', month: 'long', year: 'numeric' }) : "expiration date";
-
-                            const balance = Math.round(currentHours * 40);
-                            const neededHours = Math.max(0, target - currentHours);
-                            
-                            loyaltyMessagePart = `\nincluding this booking, your total cashback balance is ₹${balance.toLocaleString()}.\nTo encash ₹2,000, please complete ${neededHours.toFixed(1)} more hours of booking before ${windowEnd}.`;
-                          }
-                        } catch (err) {
-                          console.error("Failed to fetch loyalty status", err);
-                        }
-
-                        // Calculation for Invoice
-                        const startParts = selectedBooking.start_time.split(':').map(Number);
-                        const endParts = selectedBooking.end_time.split(':').map(Number);
-                        const duration = (endParts[0] * 60 + endParts[1] - (startParts[0] * 60 + startParts[1])) / 60;
-                        
-                        const currentTotal = selectedBooking.total_amount || 0;
-                        const rate = Math.round(currentTotal / duration);
-
-                        const fmtMoney = (n: number) => `₹ ${n.toLocaleString()}`;
-
-                        const tableRows = `Basic Amount                    ${rate} × ${duration}             ${fmtMoney(currentTotal)}`;
-
-                        // Message Construction Logic
-                        const isLive = selectedBooking.session_type === "Live with musicians";
-                        const sessionTypeDisplay = isLive
-                          ? "Live session"
-                          : selectedBooking.session_type;
-                        
-                        let sessionDetailsDisplay = "";
-                        if (selectedBooking.session_details && selectedBooking.session_details !== selectedBooking.session_type) {
-                          const prefix = isLive ? " with up to " : " with ";
-                          sessionDetailsDisplay = `${prefix}${selectedBooking.session_details}`;
-                        }
-
-                        const message = `*Booking Confirmed - Resonance Studio, Sinhgad Road Branch*
-
-Your booking of ${formattedDate} from ${formattedStartTime} to ${formattedEndTime} (${duration} hours) for ${sessionTypeDisplay}${sessionDetailsDisplay} in ${selectedBooking.studio} is confirmed with us.
-
-*Booking Amount Details:*
-
-\`\`\`
-Description                     Rate × Hours        Amount
-------------------------------------------------------------
-${tableRows}
-------------------------------------------------------------
-Final Amount                                        ${fmtMoney(currentTotal)}
-\`\`\`
-
-Book for 50 hours within any three months and earn ₹2,000 as Cashback.${loyaltyMessagePart}
-
-*Please note and inform all your group members:*
-
-Do not park vehicles blocking the society gate
-
-Kindly avoid extended chatting on the society road to maintain a peaceful environment
-
-Strictly no noise after 10:00 pm
-
-We look forward to hosting you.
-Enjoy your session!`;
+                        const message = confirmationMessage(selectedBooking);
 
                         const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
                         setWhatsappMessage(message);

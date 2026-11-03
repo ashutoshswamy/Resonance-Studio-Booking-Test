@@ -118,44 +118,6 @@ export default function ConfirmationPage() {
           </ul>
         </div>
 
-        {/* Loyalty Progress Card */}
-        {loyaltyStatus && (loyaltyStatus.hours > 0 || loyaltyStatus.window_start) && (
-          <div
-            className="glass-strong rounded-2xl p-6 mb-8 relative overflow-hidden group text-left"
-          >
-             <div className="absolute inset-0 bg-gradient-to-r from-violet-500/10 via-fuchsia-500/10 to-violet-500/10 opacity-50" />
-             
-             <div className="relative z-10">
-               <div className="flex items-center gap-2 mb-3">
-                 <Award className="w-5 h-5 text-yellow-500" />
-                 <h3 className="text-lg font-bold text-white">Loyalty Status</h3>
-               </div>
-               
-               <div className="flex justify-between items-end mb-2">
-                 <span className="text-zinc-300 text-sm">Progress to ₹2,000 Cashback</span>
-                 <span className="text-violet-400 font-bold">{Math.min(loyaltyStatus.hours, 50).toFixed(1)} / 50 hrs</span>
-               </div>
-               
-               <div className="h-3 w-full bg-zinc-800 rounded-full overflow-hidden mb-3">
-                 <div 
-                   className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
-                 />
-               </div>
-               
-               {loyaltyStatus.eligible ? (
-                 <div className="mt-4 bg-green-500/20 text-green-400 p-3 rounded-xl border border-green-500/20 flex items-center gap-3">
-                    <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
-                    <p className="text-sm font-medium">You are eligible for <strong>₹2,000 Cashback!</strong> <br/> Show this screen to the staff to claim it.</p>
-                 </div>
-               ) : (
-                 <p className="text-xs text-zinc-500">
-                   Book for 50 hours within any three months and earn ₹2,000 as Cashback.
-                 </p>
-               )}
-             </div>
-          </div>
-        )}
-
         {/* Actions */}
         <div 
           className="flex flex-col sm:flex-row gap-3"

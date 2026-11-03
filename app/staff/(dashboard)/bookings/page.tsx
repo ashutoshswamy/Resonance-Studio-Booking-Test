@@ -1,5 +1,6 @@
 "use client";
 
+import { confirmationMessage, reminderMessage } from "@/lib/whatsapp";
 import { userMessage } from "@/lib/errors";
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
@@ -680,9 +681,7 @@ export default function StaffBookingsPage() {
 
   const openWhatsAppMessage = (kind: "reminder" | "confirmation") => {
     if (!selectedBooking) return;
-    const message = kind === "reminder"
-      ? `*Reminder - Resonance Studio*\n\nThis is a reminder for your booking on ${formatDate(selectedBooking.date)} from ${formatTime(selectedBooking.start_time)} to ${formatTime(selectedBooking.end_time)} in ${selectedBooking.studio}.\n\nPlease inform your group members. We look forward to hosting you!`
-      : `*Booking Confirmation - Resonance Studio*\n\nYour booking on ${formatDate(selectedBooking.date)} from ${formatTime(selectedBooking.start_time)} to ${formatTime(selectedBooking.end_time)} in ${selectedBooking.studio} is confirmed.\n\nBooking amount: ₹${(selectedBooking.total_amount || 0).toLocaleString("en-IN")}\n\nBook for 50 hours within any three months and earn ₹2,000 as Cashback.`;
+    const message = kind === "reminder" ? reminderMessage(selectedBooking) : confirmationMessage(selectedBooking);
     setWhatsappMessage(message);
     const phone = selectedBooking.phone_number.replace(/\D/g, "");
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");

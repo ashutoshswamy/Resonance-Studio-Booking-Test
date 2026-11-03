@@ -359,20 +359,15 @@ export default function HomePage() {
                   Start here
                 </span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {[
                   ["New Booking", "/booking/new"],
-                  ["Change Booking", "/edit-booking"],
-                  ["Cancel Booking", "/cancel-booking"],
-                  ["View Booking", "/view-bookings"],
                   ["Explore Studios", "/studios"],
                 ].map(([label, href]) => (
                   <Link
                     key={label}
                     href={href}
                     className={`group inline-flex min-h-14 items-center justify-center rounded-2xl border px-2.5 py-3 text-xs sm:text-sm font-semibold whitespace-nowrap transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-300 focus-visible:ring-offset-2 focus-visible:ring-offset-navy ${
-                      label === "Explore Studios" ? "col-span-2 sm:col-span-4" : ""
-                    } ${
                       label === "New Booking"
                         ? "border-violet-300 bg-violet-300 text-navy shadow-[0_8px_24px_rgba(167,139,250,0.18)] hover:bg-violet-200"
                         : "border-white/15 bg-white/[0.03] text-white hover:border-violet-300/60 hover:bg-white/[0.08]"
@@ -385,7 +380,7 @@ export default function HomePage() {
             </div>
 
             <p className="text-sm text-zinc-500">
-              New, edit, cancel or view bookings online ·{" "}
+              Book online · To change or cancel, WhatsApp us ·{" "}
               <Link
                 href="/how-to-book"
                 className="text-amber-400 hover:text-amber-300 underline underline-offset-4"

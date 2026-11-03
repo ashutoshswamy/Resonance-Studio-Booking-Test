@@ -1,9 +1,9 @@
 "use client";
 
-import { Building2, Lock, AlertCircle, RotateCcw, Sparkles } from "lucide-react";
+import { Building2, Lock, AlertCircle, RotateCcw } from "lucide-react";
 import { useBooking, StudioName } from "../contexts/BookingContext";
 import StepLayout from "./StepLayout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { optionCard } from "./optionStyles";
@@ -11,25 +11,36 @@ import { getStudioRate, isStudioAllowed } from "../utils/studioSuggestion";
 
 const STUDIOS: {
   name: StudioName;
-  capacity: string;
+  participants: number;
+  musicians: number;
   features: string[];
 }[] = [
   {
     name: "Studio C",
-    capacity: "8 participants",
+    participants: 8,
+    musicians: 2,
     features: ["Perfect for duets", "Intimate setting"],
   },
   {
     name: "Studio B",
-    capacity: "12 participants",
+    participants: 12,
+    musicians: 5,
     features: ["Band rehearsal ready", "Karaoke setup"],
   },
   {
     name: "Studio A",
-    capacity: "30 participants",
+    participants: 30,
+    musicians: 12,
     features: ["Full band setup", "Recording equipment"],
   },
 ];
+
+// Capacity only makes sense for Karaoke (people) and Live (musicians); other sessions show none.
+function capacityLabel(session: string, studio: (typeof STUDIOS)[number]) {
+  if (session === "Karaoke") return `Up to ${studio.participants} participants`;
+  if (session === "Live with musicians") return `Up to ${studio.musicians} musicians`;
+  return "";
+}
 
 export default function StudioStep() {
   const { draft, updateDraft, nextStep, setStep } = useBooking();
@@ -104,13 +115,6 @@ export default function StudioStep() {
             <span className="font-semibold text-foreground">{draft.recommendedStudio}</span>
             {upgradeOptions.length > 0 && <> (or upgrade to {upgradeOptions.join(" / ")})</>}
           </p>
-          <Alert className="border-emerald-500/25 bg-emerald-500/10 text-emerald-300">
-            <Sparkles />
-            <AlertTitle>Earn cashback on every booking</AlertTitle>
-            <AlertDescription className="text-emerald-300/80 text-xs">
-              Join our Rolling Milestone program
-            </AlertDescription>
-          </Alert>
         </div>
       )}
 
@@ -154,9 +158,11 @@ export default function StudioStep() {
                 {isRecording && (
                   <span className="block text-xs text-muted-foreground truncate">Professional recording studio</span>
                 )}
-                <Badge variant="secondary" className="font-normal">
-                  {isRecording ? "Recording equipment" : `Up to ${studio.capacity}`}
-                </Badge>
+                {(isRecording || capacityLabel(draft.sessionType, studio)) && (
+                  <Badge variant="secondary" className="font-normal">
+                    {isRecording ? "Recording equipment" : capacityLabel(draft.sessionType, studio)}
+                  </Badge>
+                )}
               </span>
               {isAllowed && (
                 <span className="text-sm font-semibold text-primary whitespace-nowrap">

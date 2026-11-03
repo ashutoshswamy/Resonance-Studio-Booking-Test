@@ -1,60 +1,47 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { supabaseServer } from "@/lib/supabaseServer";
-import { getAdminUser } from "@/lib/apiSecurity";
+import { requireAdmin } from "@/lib/apiSecurity";
 
-async function requireAdmin(request: NextRequest) {
-  const admin = await getAdminUser(request);
-  if (!admin || !["admin", "super_admin"].includes(admin.role)) return null;
-  return admin;
-}
+// "Verification requests": a customer entered a name that does not match the one stored for that mobile number.
+// (Table is still password_reset_requests - reused to avoid a migration.)
+const ROLES = ["admin", "super_admin"];
 
 export async function GET(request: NextRequest) {
-  if (!(await requireAdmin(request))) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const admin = await requireAdmin(request, ROLES);
+  if (admin instanceof NextResponse) return admin;
   const { data, error } = await supabaseServer
     .from("password_reset_requests")
-    .select("id, phone_number, name, status, admin_note, created_at, resolved_at")
-    .order("created_at", { ascending: false });
-  if (error) return NextResponse.json({ error: "Unable to load password requests." }, { status: 500 });
-  return NextResponse.json({ requests: data || [] });
+    .select("id, phone_number, name, status, created_at, resolved_at")
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (error) return NextResponse.json({ error: "Unable to load requests." }, { status: 500 });
+
+  const phones = [...new Set((data || []).map((r) => r.phone_number))];
+  const { data: users } = phones.length
+    ? await supabaseServer.from("users").select("phone_number, name").in("phone_number", phones)
+    : { data: [] as { phone_number: string; name: string | null }[] };
+  const registered = Object.fromEntries((users || []).map((u) => [u.phone_number, u.name]));
+  return NextResponse.json({ requests: (data || []).map((r) => ({ ...r, registered_name: registered[r.phone_number] ?? null })) });
 }
 
+// PATCH { id, useEnteredName?: boolean } - mark resolved; optionally replace the stored name with the one the customer typed.
 export async function PATCH(request: NextRequest) {
-  const admin = await requireAdmin(request);
-  if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const admin = await requireAdmin(request, ROLES);
+  if (admin instanceof NextResponse) return admin;
 
   const body = await request.json().catch(() => ({}));
-  const requestId = String(body.id ?? "");
-  const password = String(body.password ?? "");
-  const note = String(body.note ?? "").trim().slice(0, 300);
-  if (!requestId || password.length < 8 || password.length > 128) {
-    return NextResponse.json({ error: "A valid request and an 8–128 character password are required." }, { status: 400 });
+  const id = String(body.id ?? "");
+  const { data: req } = await supabaseServer.from("password_reset_requests").select("id, phone_number, name").eq("id", id).single();
+  if (!req) return NextResponse.json({ error: "Request not found." }, { status: 404 });
+
+  if (body.useEnteredName && req.name) {
+    const { error } = await supabaseServer.from("users").update({ name: req.name }).eq("phone_number", req.phone_number);
+    if (error) return NextResponse.json({ error: "Unable to update the customer name." }, { status: 500 });
   }
-
-  const { data: resetRequest, error: requestError } = await supabaseServer
+  const { error } = await supabaseServer
     .from("password_reset_requests")
-    .select("id, phone_number, name")
-    .eq("id", requestId)
-    .single();
-  if (requestError || !resetRequest) return NextResponse.json({ error: "Password request not found." }, { status: 404 });
-
-  const passwordHash = await bcrypt.hash(password, 12);
-  const { data: existingUser } = await supabaseServer
-    .from("users")
-    .select("phone_number")
-    .eq("phone_number", resetRequest.phone_number)
-    .maybeSingle();
-
-  const userResult = existingUser
-    ? await supabaseServer.from("users").update({ password_hash: passwordHash, name: resetRequest.name }).eq("phone_number", resetRequest.phone_number)
-    : await supabaseServer.from("users").insert({ phone_number: resetRequest.phone_number, name: resetRequest.name, password_hash: passwordHash });
-  if (userResult.error) return NextResponse.json({ error: "Unable to update the customer password." }, { status: 500 });
-
-  const { error: updateError } = await supabaseServer
-    .from("password_reset_requests")
-    .update({ status: "resolved", admin_note: note || null, resolved_at: new Date().toISOString() })
-    .eq("id", requestId);
-  if (updateError) return NextResponse.json({ error: "Password changed, but request status could not be updated." }, { status: 500 });
-
-  return NextResponse.json({ success: true, phone: resetRequest.phone_number });
+    .update({ status: "resolved", resolved_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return NextResponse.json({ error: "Unable to resolve request." }, { status: 500 });
+  return NextResponse.json({ success: true });
 }

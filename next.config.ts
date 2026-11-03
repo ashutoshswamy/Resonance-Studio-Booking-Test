@@ -59,6 +59,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "base-uri 'self'",
               "frame-ancestors 'self'",
+              "frame-src https://www.google.com https://maps.google.com",
               "form-action 'self'",
               "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com",
               "style-src 'self' 'unsafe-inline'",

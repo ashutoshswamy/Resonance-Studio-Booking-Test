@@ -9,7 +9,6 @@ const navLinks = [
   { label: "Home", href: "/home" },
   { label: "Studios", href: "/studios" },
   { label: "Availability", href: "/availability" },
-  { label: "View Bookings", href: "/view-bookings" },
   { label: "Gallery", href: "/gallery" },
   { label: "Pricing", href: "/rate-card" },
   { label: "FAQ", href: "/faq" },

@@ -7,6 +7,7 @@ import Navigation from "./components/Navigation";
 import Footer from "./components/Footer";
 import MainContent from "./components/MainContent";
 import ClearCache from "./components/ClearCache";
+import ContactBar from "./components/ContactBar";
 import Preloader from "./components/Preloader";
 import SiteMotion from "./components/SiteMotion";
 import { LocalBusinessStructuredData } from "./components/StructuredData";
@@ -157,6 +158,8 @@ export default function RootLayout({
         {/* First-visit loading screen + site-wide GSAP motion */}
         <Preloader />
         <SiteMotion />
+
+        <ContactBar />
 
         {/* Navigation - conditionally renders based on route */}
         <Navigation />

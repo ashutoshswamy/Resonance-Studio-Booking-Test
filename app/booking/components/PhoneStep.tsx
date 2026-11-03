@@ -31,7 +31,7 @@ import {
 
 const CUSTOMER_DETAILS_KEY = "resonance_customer_details";
 
-export default function PhoneStep() {
+function StaffPhoneStep() {
   const router = useRouter();
   const { draft, updateDraft, nextStep, resetDraft, mode } = useBooking();
 
@@ -278,6 +278,11 @@ export default function PhoneStep() {
     performAutoLogin();
   }, []); // Run only on mount
 
+  // Edit flow (from Display / bookings list): phone + name come from the booking itself, shown read-only.
+  useEffect(() => {
+    if (draft.isEditMode && draft.name && name !== draft.name) setName(draft.name);
+  }, [draft.isEditMode, draft.name, name]);
+
   // Sync phone from draft if it comes in late (e.g. from sessionStorage)
   useEffect(() => {
     const draftDigits = draft.phone.replace(/\D/g, "");
@@ -406,7 +411,7 @@ export default function PhoneStep() {
           setIsSavingDetails(false);
         }
       }
-      if (isExistingUser && name.trim() && (isEditingDetails || mode !== "customer")) {
+      if (!draft.isEditMode && isExistingUser && name.trim() && (isEditingDetails || mode !== "customer")) {
         setIsSavingDetails(true);
         try {
           await (mode === "customer" ? fetch : adminFetch)("/api/check-user", {
@@ -546,7 +551,7 @@ export default function PhoneStep() {
 
   return (
     <StepLayout
-      title={draft.isEditMode ? "Verify your phone" : "Enter your WhatsApp mobile number"}
+      title={draft.isEditMode ? "Customer details" : "Enter your WhatsApp mobile number"}
       showBack={true}
       showNext={true}
       onBack={handleBack}
@@ -576,6 +581,7 @@ export default function PhoneStep() {
               autoComplete="tel-national"
               value={phone}
               onChange={(e) => handlePhoneChange(e.target.value)}
+              readOnly={draft.isEditMode}
               placeholder="98765 43210"
               className="h-11 pl-[4.5rem] pr-10 text-base"
               autoFocus
@@ -592,7 +598,7 @@ export default function PhoneStep() {
           </p>
         </div>
 
-        {phoneValid && userChecked && (
+        {phoneValid && (userChecked || draft.isEditMode) && (
           <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-300">
             <Label htmlFor="booking-name">
               Name {!isExistingUser && <span className="text-muted-foreground">(required)</span>}
@@ -606,7 +612,7 @@ export default function PhoneStep() {
                 onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="Your name"
                 className="h-11 pl-10 text-base read-only:opacity-75"
-                readOnly={isExistingUser && mode === "customer" && !isEditingDetails}
+                readOnly={draft.isEditMode || (isExistingUser && mode === "customer" && !isEditingDetails)}
               />
             </div>
           </div>
@@ -641,4 +647,28 @@ export default function PhoneStep() {
       </div>
     </StepLayout>
   );
+}
+
+// Customers are identified on /booking (IdentityGate); here we just pick that identity up and move on.
+function CustomerPhoneStep() {
+  const router = useRouter();
+  const { updateDraft, nextStep } = useBooking();
+  useEffect(() => {
+    checkAutoLogin().then((r) => {
+      if (!r.authenticated || !r.user) return router.replace("/booking");
+      updateDraft({ phone: r.user.phone, name: r.user.name, email: "", isExistingUser: true, deviceTrusted: true });
+      nextStep();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return (
+    <div className="flex justify-center py-16">
+      <Spinner className="size-6 text-primary" />
+    </div>
+  );
+}
+
+export default function PhoneStep() {
+  const { mode } = useBooking();
+  return mode === "customer" ? <CustomerPhoneStep /> : <StaffPhoneStep />;
 }

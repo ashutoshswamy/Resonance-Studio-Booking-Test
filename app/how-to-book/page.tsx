@@ -64,10 +64,9 @@ const bookingSteps = [
     title: "Confirm",
     description: "Sign in and you're booked.",
     details: [
-      "Sign in with your password",
+      "Enter your WhatsApp number and name (one time per device)",
       "Your confirmation shows on screen straight away",
-      "You get a WhatsApp/SMS with your booking ID",
-      "An email follows if you gave one",
+      "You get your booking confirmation on WhatsApp",
     ],
   },
 ];
@@ -98,7 +97,7 @@ const manage = [
     steps: [
       "Enter the mobile number and name used for your booking",
       "Pick the booking to change",
-      "Sign in with your password if asked",
+      "Confirm your WhatsApp number and name if asked",
       "Choose a new date, time or room and confirm",
     ],
     note: "Free online changes are available more than 24 hours before the session. Within 24 hours, contact the studio directly.",
@@ -110,7 +109,7 @@ const manage = [
     steps: [
       "Enter the mobile number and name used for your booking",
       "Pick the booking to cancel",
-      "Sign in with your password if asked",
+      "Confirm your WhatsApp number and name if asked",
       "Confirm the cancellation",
     ],
     note: "Free cancellation with more than 24 hours’ notice. Within 24 hours, contact the studio directly; late cancellation is 50%.",
@@ -270,23 +269,6 @@ export default function HowToBookPage() {
                 </div>
               ))}
             </dl>
-
-            <div className="rounded-3xl border border-violet-400/30 bg-white/[0.03] p-6 sm:p-8 mb-10">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-fuchsia-400 mb-2">Cashback</p>
-              <p className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-3">
-                Book for 50 hours within any three months and earn <span className="text-violet-400">₹2,000 as Cashback.</span>
-              </p>
-              <p className="text-zinc-400 mb-5">
-                Cashback is credited after completed sessions and tracked against your mobile number.
-              </p>
-              <Link
-                href="/rate-card"
-                className="group inline-flex items-center gap-1.5 text-sm font-semibold text-violet-400 hover:text-violet-300"
-              >
-                See pricing and full cashback rules
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-            </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <Link

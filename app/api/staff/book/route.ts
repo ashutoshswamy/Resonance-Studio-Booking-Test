@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate total amount if rate_per_hour is provided
     let total_amount: number | null = null;
-    if (rate_per_hour) {
+    if (typeof rate_per_hour === "number" && rate_per_hour >= 0) {
       total_amount = Math.round(rate_per_hour * durationHours);
     }
 
@@ -467,7 +467,7 @@ export async function PUT(request: NextRequest) {
 
     // Calculate total amount if rate_per_hour is provided
     let total_amount: number | null = null;
-    if (rate_per_hour) {
+    if (typeof rate_per_hour === "number" && rate_per_hour >= 0) {
       total_amount = Math.round(rate_per_hour * durationHours);
     }
 

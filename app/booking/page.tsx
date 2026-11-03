@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, CalendarPlus, ChevronRight, Edit, Eye, Music2, XCircle } from 'lucide-react';
+import { ArrowLeft, CalendarPlus, ChevronRight, Compass, Music2 } from 'lucide-react';
+import IdentityGate from '@/app/components/IdentityGate';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -14,31 +15,17 @@ const menuOptions = [
     href: '/booking/new',
   },
   {
-    id: 'change',
-    title: 'Change Existing Booking',
-    description: 'Modify your current booking',
-    icon: Edit,
-    href: '/edit-booking',
-  },
-  {
-    id: 'cancel',
-    title: 'Cancel Existing Booking',
-    description: 'Cancel a scheduled booking',
-    icon: XCircle,
-    href: '/cancel-booking',
-  },
-  {
-    id: 'view',
-    title: 'View Upcoming Bookings',
-    description: 'See all your scheduled sessions',
-    icon: Eye,
-    href: '/view-bookings',
+    id: 'explore',
+    title: 'Explore Studios',
+    description: 'See our studios, rates and facilities',
+    icon: Compass,
+    href: '/studios',
   },
 ];
 
 export default function BookingMenu() {
   return (
-    <div className="h-[100dvh] flex flex-col overflow-hidden bg-background">
+    <div className="h-[calc(100dvh-var(--contact-bar-h))] flex flex-col overflow-hidden bg-background">
       <header className="flex-shrink-0 px-4 pt-4 pb-2 text-center">
         <div className="flex items-center justify-center gap-3 mb-5">
           <div className="w-10 h-10 rounded-xl bg-primary text-primary-foreground flex items-center justify-center">
@@ -56,6 +43,8 @@ export default function BookingMenu() {
       </header>
 
       <main className="flex-1 px-4 py-4 overflow-auto">
+        <IdentityGate>
+          {() => (
         <nav className="flex flex-col gap-3 max-w-md mx-auto">
           {menuOptions.map((option, index) => {
             const Icon = option.icon;
@@ -96,7 +85,12 @@ export default function BookingMenu() {
               </Card>
             );
           })}
+          <p className="text-base font-semibold text-foreground pt-2">
+            For Change or Cancel existing Booking please drop us a WhatsApp message (no calls) at the contact number above.
+          </p>
         </nav>
+          )}
+        </IdentityGate>
       </main>
 
       <footer className="flex-shrink-0 px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-border bg-background/90 backdrop-blur">

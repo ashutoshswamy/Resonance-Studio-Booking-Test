@@ -355,8 +355,8 @@ export default function ConfirmStep() {
 
         <p className="text-xs text-muted-foreground text-center">
           {draft.isEditMode
-            ? "Your booking has been updated. A confirmation email has been sent."
-            : "A confirmation email has been sent to your email address"}
+            ? "Your booking has been updated. We will confirm the change on WhatsApp."
+            : "We will send your booking confirmation on WhatsApp"}
         </p>
       </div>
     </StepLayout>

@@ -107,13 +107,12 @@ export async function PATCH(request: Request) {
     const phone = String(body.phone ?? "").replace(/\D/g, "");
     const name = cleanText(body.name, 100);
     const admin = await getAdminUser(request);
-    const sessionPhone = await getSessionPhone(request);
-
     if (!isPhone(phone) || !name) {
       return NextResponse.json({ error: "Valid phone number and name are required" }, { status: 400 });
     }
-    if (!admin && sessionPhone !== phone) {
-      return NextResponse.json({ error: "Please verify this phone number first" }, { status: 403 });
+    // Customer name/number are locked once confirmed; only an admin/staff user may change them.
+    if (!admin) {
+      return NextResponse.json({ error: "Please drop us a WhatsApp message to change your details." }, { status: 403 });
     }
 
     const { data, error } = await supabaseServer

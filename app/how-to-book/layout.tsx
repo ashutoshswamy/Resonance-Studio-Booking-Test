@@ -4,7 +4,7 @@ import { OG_BASE } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "How to Book",
   description:
-    "Step-by-step guide to booking a jam room, karaoke room or recording session at Resonance Jam Room, Pune. Book online, manage or cancel bookings, and earn cashback.",
+    "Step-by-step guide to booking a jam room, karaoke room or recording session at Resonance Jam Room, Pune. Book online, manage or cancel bookings.",
   openGraph: {
     ...OG_BASE,
     title: "How to Book a Session - Resonance Jam Room",

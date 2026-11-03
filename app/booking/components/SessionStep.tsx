@@ -141,7 +141,7 @@ export default function SessionStep() {
               <span className="p-2 rounded-lg bg-primary/10 text-primary [&_svg]:size-6!">
                 {session.icon}
               </span>
-              <span className="font-semibold text-sm leading-tight">{session.name}</span>
+              <span className="font-semibold text-sm leading-tight">{session.name === "Band" ? "College Student Band" : session.name}</span>
               <span className="text-[11px] text-muted-foreground leading-tight">
                 {session.description}
               </span>

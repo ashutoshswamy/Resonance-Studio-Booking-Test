@@ -275,9 +275,10 @@ export default function DisplayPage() {
 
   // Calculate current time position as percentage (vertical)
   const getCurrentTimePosition = () => {
+    // Same scale as the grid rows and booking blocks: timeSlots.length rows (endHour is rounded up
+    // to whole rows, so using endHour - startHour drifted the line ~20-30 min ahead).
     const totalMinutes = (currentHour - startHour) * 60 + currentMinutes;
-    const totalDuration = (endHour - startHour) * 60;
-    return (totalMinutes / totalDuration) * 100;
+    return (totalMinutes / (timeSlots.length * 60)) * 100;
   };
 
   const currentTimePosition = getCurrentTimePosition();

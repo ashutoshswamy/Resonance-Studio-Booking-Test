@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PanelShell from "@/app/components/PanelShell";
-import { LayoutDashboard, Calendar, Clock, Users, Settings, Gift, KeyRound } from "lucide-react";
+import { LayoutDashboard, Calendar, Clock, Users, Settings, Gift, KeyRound, Contact } from "lucide-react";
 import { signOut, getSession } from "@/lib/supabaseAuth";
 
 interface AdminInfo {
@@ -57,7 +57,7 @@ const navItems = [
     allowedRoles: ['admin', 'super_admin', 'staff']
   },
   {
-    label: "Password Requests",
+    label: "Verification Requests",
     group: "Operate",
     href: "/admin/password-requests",
     icon: KeyRound,

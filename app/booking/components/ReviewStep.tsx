@@ -9,14 +9,20 @@ import {
   CreditCard,
   AlertCircle,
 } from "lucide-react";
+import { useState } from "react";
 import { useBooking } from "../contexts/BookingContext";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import StepLayout from "./StepLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 export default function ReviewStep() {
-  const { draft, nextStep, hasChangesFromOriginal } = useBooking();
+  const { draft, updateDraft, nextStep, hasChangesFromOriginal, mode } = useBooking();
+  // Staff / admin can agree a special rate (higher or lower); customers always get the standard rate.
+  const canEditRate = mode !== "customer";
+  const [rateTouched, setRateTouched] = useState(false);
 
   // Check if there are changes in edit mode
   const hasChanges = hasChangesFromOriginal();
@@ -91,7 +97,7 @@ export default function ReviewStep() {
     return "";
   };
 
-  const totalAmount = draft.ratePerHour * draft.duration;
+  const totalAmount = (Number.isFinite(draft.ratePerHour) ? draft.ratePerHour : 0) * draft.duration;
 
   const handleNext = () => {
     nextStep();
@@ -114,10 +120,10 @@ export default function ReviewStep() {
       showNext={true}
       nextLabel={draft.isEditMode ? "Confirm Update" : "Confirm Booking"}
       onNext={handleNext}
-      isNextDisabled={draft.isEditMode && !hasChanges}
+      isNextDisabled={(draft.isEditMode && !hasChanges && !rateTouched) || (canEditRate && !(draft.ratePerHour >= 0))}
     >
       <div className="space-y-3">
-        {draft.isEditMode && !hasChanges && (
+        {draft.isEditMode && !hasChanges && !rateTouched && (
           <Alert className="border-amber-500/25 bg-amber-500/10 text-amber-300">
             <AlertCircle />
             <AlertTitle>No changes made</AlertTitle>
@@ -174,6 +180,24 @@ export default function ReviewStep() {
                 ₹{draft.ratePerHour.toLocaleString("en-IN")} × {draft.duration} hr
               </span>
             </div>
+            {canEditRate && (
+              <div className="space-y-1">
+                <Label htmlFor="special-rate" className="text-xs font-semibold">Special rate per hour (₹) - edit if agreed with customer</Label>
+                <Input
+                  id="special-rate"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={10}
+                  value={Number.isFinite(draft.ratePerHour) ? draft.ratePerHour : ""}
+                  onChange={(e) => {
+                    setRateTouched(true);
+                    updateDraft({ ratePerHour: e.target.value === "" ? NaN : Math.max(0, Number(e.target.value)) });
+                  }}
+                  className="h-10 text-base"
+                />
+              </div>
+            )}
             <Separator />
             <div className="flex items-center justify-between">
               <span className="font-semibold text-sm">Payable amount</span>

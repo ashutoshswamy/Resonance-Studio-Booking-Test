@@ -242,48 +242,6 @@ export default function ViewBookingsPage() {
           </p>
         )}
 
-        {/* Loyalty */}
-        {((isAuthenticated && loyaltyStatus) || (searched && loyaltyStatus)) && (() => {
-          const reward = (loyaltyStatus.reward_amount || 2000).toLocaleString('en-IN');
-          const lit = Math.min(LOYALTY_SEGMENTS, Math.round((loyaltyStatus.hours / loyaltyStatus.target) * LOYALTY_SEGMENTS));
-          return (
-            <section aria-labelledby="loyalty-title" className="mb-12 rounded-3xl border border-white/10 bg-white/[0.03] p-6">
-              <div className="flex items-baseline justify-between gap-4 mb-4">
-                <h2 id="loyalty-title" className="text-xs font-medium uppercase tracking-[0.14em] text-zinc-400">
-                  Cashback progress
-                </h2>
-                <p className="text-white font-semibold tabular-nums">
-                  {loyaltyStatus.hours} <span className="text-zinc-500 font-normal">/ {loyaltyStatus.target} hours</span>
-                </p>
-              </div>
-              <div
-                className="flex gap-1 mb-4"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={loyaltyStatus.target}
-                aria-valuenow={loyaltyStatus.hours}
-                aria-label="Hours completed toward cashback"
-              >
-                {Array.from({ length: LOYALTY_SEGMENTS }, (_, i) => (
-                  <span
-                    key={i}
-                    className={`h-2.5 flex-1 rounded-[2px] ${
-                      i >= lit ? "bg-white/[0.07]" : i >= LOYALTY_SEGMENTS - 3 ? "bg-fuchsia-400" : "bg-violet-400"
-                    }`}
-                  />
-                ))}
-              </div>
-              <p className="text-sm text-zinc-300">
-                {loyaltyStatus.eligible ? (
-                  <><span className="text-violet-400 font-semibold">₹{reward} unlocked.</span> You&apos;ve reached the target.</>
-                ) : (
-                  <>{loyaltyStatus.target - loyaltyStatus.hours} more hours to unlock <span className="text-white font-semibold">₹{reward}</span>.</>
-                )}
-              </p>
-            </section>
-          );
-        })()}
-
         {/* Bookings */}
         {searched && (
           bookings && bookings.length > 0 ? (

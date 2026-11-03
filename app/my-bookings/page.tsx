@@ -423,52 +423,6 @@ export default function MyBookingsPage() {
               </div>
             </div>
 
-            {/* Loyalty Progress */}
-            {loyaltyStatus && (
-              <div 
-                className="glass-strong rounded-2xl p-6 relative overflow-hidden"
-              >
-                {/* Background Glow */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-amber-400" />
-                      <h3 className="text-lg font-bold text-white">Loyalty Status</h3>
-                    </div>
-                    {loyaltyStatus.eligible && (
-                      <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/20 animate-pulse">
-                        Reward Available!
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="text-zinc-400">Progress</span>
-                    <span className="text-white font-medium">
-                      {loyaltyStatus.hours} / {loyaltyStatus.target} hours
-                    </span>
-                  </div>
-
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-4">
-                    <div 
-                      className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
-                    />
-                  </div>
-
-                  <div className="flex items-start gap-2 text-xs text-zinc-400">
-                    <TrendingUp className="w-3.5 h-3.5 mt-0.5 text-zinc-500" />
-                    <p>
-                      {loyaltyStatus.eligible 
-                        ? `Congratulations! You've unlocked a ₹${(loyaltyStatus.reward_amount || 2000).toLocaleString('en-IN')} discount on your next booking.`
-                        : `Complete ${loyaltyStatus.target - loyaltyStatus.hours} more hours to unlock a ₹${(loyaltyStatus.reward_amount || 2000).toLocaleString('en-IN')} reward.`
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
@@ -535,52 +489,6 @@ export default function MyBookingsPage() {
               </form>
             </div>
 
-            {/* Loyalty Progress for Non-Authenticated Users (shown after search) */}
-            {searched && loyaltyStatus && (
-              <div 
-                className="glass-strong rounded-2xl p-6 mb-6 relative overflow-hidden"
-              >
-                {/* Background Glow */}
-                <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <Award className="w-5 h-5 text-amber-400" />
-                      <h3 className="text-lg font-bold text-white">Loyalty Status</h3>
-                    </div>
-                    {loyaltyStatus.eligible && (
-                      <span className="px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold border border-amber-500/20 animate-pulse">
-                        Reward Available!
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div className="mb-2 flex justify-between text-sm">
-                    <span className="text-zinc-400">Progress</span>
-                    <span className="text-white font-medium">
-                      {loyaltyStatus.hours} / {loyaltyStatus.target} hours
-                    </span>
-                  </div>
-
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden mb-4">
-                    <div 
-                      className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
-                    />
-                  </div>
-
-                  <div className="flex items-start gap-2 text-xs text-zinc-400">
-                    <TrendingUp className="w-3.5 h-3.5 mt-0.5 text-zinc-500" />
-                    <p>
-                      {loyaltyStatus.eligible 
-                        ? `Congratulations! You've unlocked a ₹${(loyaltyStatus.reward_amount || 2000).toLocaleString('en-IN')} discount on your next booking.`
-                        : `Complete ${loyaltyStatus.target - loyaltyStatus.hours} more hours to unlock a ₹${(loyaltyStatus.reward_amount || 2000).toLocaleString('en-IN')} reward.`
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </>
         )}
 

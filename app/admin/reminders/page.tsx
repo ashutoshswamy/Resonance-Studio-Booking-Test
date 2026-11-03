@@ -24,6 +24,7 @@ import {
 import { getSession, signInWithEmail, signOut } from "@/lib/supabaseAuth";
 import { adminFetch } from "@/lib/adminFetch";
 import { istDateTime, todayIST } from "@/lib/ist";
+import { cancellationMessage, changeMessage, confirmationMessage, reminderMessage } from "@/lib/whatsapp";
 
 // --- Types ---
 
@@ -43,6 +44,8 @@ interface Booking {
   total_amount: number | null;
   notes: string | null;
   created_at: string;
+  updated_at: string | null;
+  cancelled_at: string | null;
   whatsapp_reminder_sent_at: string | null;
   whatsapp_confirmation_sent_at: string | null;
 }
@@ -98,6 +101,32 @@ const formatDate = (dateStr: string) => {
     month: "short",
     day: "numeric",
   });
+};
+
+
+// --- New / changed / cancelled tracking ---
+// Marking a message "sent" bumps updated_at (DB trigger), so compare against the latest sent stamp with a tolerance.
+// ponytail: 30s tolerance; a change made within 30s of sending would be missed.
+const TOL = 30_000;
+const ts = (v: string | null | undefined) => (v ? new Date(v).getTime() : 0);
+type Kind = "new" | "changed" | "cancelled";
+
+const touched = (b: Booking) => Math.max(ts(b.whatsapp_confirmation_sent_at), ts(b.whatsapp_reminder_sent_at));
+const kindOf = (b: Booking): Kind =>
+  b.status === "cancelled"
+    ? "cancelled"
+    : ts(b.whatsapp_confirmation_sent_at) && ts(b.updated_at) > touched(b) + TOL
+      ? "changed"
+      : "new";
+/** When the customer-visible event (booking / change / cancellation) happened. */
+const eventTime = (b: Booking) =>
+  kindOf(b) === "cancelled" ? ts(b.cancelled_at) : kindOf(b) === "changed" ? ts(b.updated_at) : ts(b.created_at);
+/** Confirmation message already sent for the latest event? */
+const confirmationDone = (b: Booking) => {
+  const sent = ts(b.whatsapp_confirmation_sent_at);
+  if (!sent) return false;
+  const k = kindOf(b);
+  return k === "cancelled" ? ts(b.cancelled_at) <= sent + TOL : k === "new";
 };
 
 // --- Main Component ---
@@ -225,7 +254,7 @@ export default function StandaloneRemindersPage() {
     setLoading(true);
     try {
       const token = await getAccessToken();
-      const response = await fetch(`/api/admin/bookings?status=confirmed&startDate=${todayIST()}`, {
+      const response = await fetch(`/api/admin/bookings?startDate=${todayIST()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -246,84 +275,12 @@ export default function StandaloneRemindersPage() {
     }
   }, [isAuthorized, fetchBookings]);
 
-  const buildConfirmationMessage = async (booking: Booking): Promise<string> => {
-    const phone = booking.phone_number.replace(/[^0-9]/g, "");
-    const formattedDate = formatDate(booking.date);
-    const formattedStartTime = formatTime(booking.start_time);
-    const formattedEndTime = formatTime(booking.end_time);
-
-    // Fetch loyalty status
-    let loyaltyMessagePart = "";
-    try {
-      const res = await adminFetch(`/api/loyalty/status?phone=${phone}`);
-      const loyaltyData = await res.json();
-      if (loyaltyData && !loyaltyData.error) {
-        const currentHours = Number(loyaltyData.hours || 0);
-        const target = Number(loyaltyData.target || 50);
-        const windowEnd = loyaltyData.window_end ? new Date(loyaltyData.window_end).toLocaleDateString("en-GB", { timeZone: "Asia/Kolkata", day: 'numeric', month: 'long', year: 'numeric' }) : "expiration date";
-
-        const balance = Math.round(currentHours * 40);
-        const neededHours = Math.max(0, target - currentHours);
-        
-        loyaltyMessagePart = `\nincluding this booking, your total cashback balance is ₹${balance.toLocaleString()}.\nTo encash ₹2,000, please complete ${neededHours.toFixed(1)} more hours of booking before ${windowEnd}.`;
-      }
-    } catch (err) {
-      console.error("Failed to fetch loyalty status", err);
-    }
-
-    // Calculation for Invoice
-    const s = booking.start_time.split(':').map(Number);
-    const e = booking.end_time.split(':').map(Number);
-    const duration = (e[0] * 60 + e[1] - (s[0] * 60 + s[1])) / 60;
-    
-    const currentTotal = booking.total_amount || 0;
-    const rate = Math.round(currentTotal / duration);
-
-    const fmtMoney = (n: number) => `₹ ${n.toLocaleString()}`;
-
-    const tableRows = `Basic Amount                    ${rate} × ${duration}             ${fmtMoney(currentTotal)}`;
-
-    // Message Construction Logic
-    const isLive = booking.session_type === "Live with musicians";
-    const sessionTypeDisplay = isLive
-      ? "Live session"
-      : booking.session_type;
-    
-    let sessionDetailsDisplay = "";
-    if (booking.session_details && booking.session_details !== booking.session_type) {
-      const prefix = isLive ? " with up to " : " with ";
-      sessionDetailsDisplay = `${prefix}${booking.session_details}`;
-    }
-
-    const message = `*Booking Confirmed - Resonance Studio, Sinhgad Road Branch*
-
-Your booking of ${formattedDate} from ${formattedStartTime} to ${formattedEndTime} (${duration} hours) for ${sessionTypeDisplay}${sessionDetailsDisplay} in ${booking.studio} is confirmed with us.
-
-*Booking Amount Details:*
-
-\`\`\`
-Description                     Rate × Hours        Amount
-------------------------------------------------------------
-${tableRows}
-------------------------------------------------------------
-Final Amount                                        ${fmtMoney(currentTotal)}
-\`\`\`
-
-Book for 50 hours within any three months and earn ₹2,000 as Cashback.${loyaltyMessagePart}
-
-*Please note and inform all your group members:*
-
-Do not park vehicles blocking the society gate
-
-Kindly avoid extended chatting on the society road to maintain a peaceful environment
-
-Strictly no noise after 10:00 pm
-
-We look forward to hosting you.
-Enjoy your session!`;
-
-    return message;
-  };
+  const buildConfirmationMessage = async (booking: Booking): Promise<string> =>
+    kindOf(booking) === "cancelled"
+      ? cancellationMessage(booking)
+      : kindOf(booking) === "changed"
+        ? changeMessage(booking)
+        : confirmationMessage(booking);
 
   const sendConfirmation = async (booking: Booking) => {
     // Open the tab now (inside the click) so the browser doesn't block it after the awaits below.
@@ -360,50 +317,7 @@ Enjoy your session!`;
     }
   };
 
-  const buildReminderMessage = (booking: Booking): string => {
-    const formattedStartTime = formatTime(booking.start_time);
-    const formattedEndTime = formatTime(booking.end_time);
-
-    // Date formatting with ordinal
-    const dateObj = new Date(booking.date);
-    const dayName = dateObj.toLocaleDateString('en-GB', { timeZone: "Asia/Kolkata", weekday: 'long' });
-    const d = dateObj.getUTCDate();
-    const ordinal = (d > 3 && d < 21) ? 'th' : ['th', 'st', 'nd', 'rd'][d % 10] || 'th';
-    const monthYear = dateObj.toLocaleDateString('en-GB', { timeZone: "Asia/Kolkata", month: 'long', year: 'numeric' });
-    const niceDate = `${dayName}, ${d}${ordinal} ${monthYear}`;
-
-    // Duration calculation
-    const s = booking.start_time.split(':').map(Number);
-    const e = booking.end_time.split(':').map(Number);
-    const duration = (e[0] * 60 + e[1] - (s[0] * 60 + s[1])) / 60;
-
-    const isLive = booking.session_type === "Live with musicians";
-    const sessionTypeDisplay = isLive
-      ? "Live session"
-      : (booking.session_type || "Session");
-    
-    let sessionDetailsDisplay = "";
-    if (booking.session_details && booking.session_details !== booking.session_type) {
-      const prefix = isLive ? " with up to " : " with ";
-      sessionDetailsDisplay = `${prefix}${booking.session_details}`;
-    }
-
-    const message = `*Reminder - Resonance Studio, Sinhgad Road Branch*
-
-This is to remind you that you have an upcoming booking on ${niceDate} from ${formattedStartTime} to ${formattedEndTime} (${duration} hours) for a ${sessionTypeDisplay}${sessionDetailsDisplay} in ${booking.studio} with us.
-
-*Please note and inform all your group members:*
-
-Do not park vehicles blocking the society gate
-
-Kindly avoid extended chatting on the society road to maintain a peaceful environment
-
-Strictly no noise after 10:00 pm
-
-We look forward to hosting you.
-See you soon!`;
-    return message;
-  };
+  const buildReminderMessage = (booking: Booking): string => reminderMessage(booking);
 
   const sendReminder = async (booking: Booking) => {
     const phone = booking.phone_number.replace(/[^0-9]/g, "");
@@ -586,39 +500,33 @@ See you soon!`;
 
   // Authorized -> two independent queues
   const isConfirmation = section === "confirmation";
-  const sentAt = (b: Booking) => (isConfirmation ? b.whatsapp_confirmation_sent_at : b.whatsapp_reminder_sent_at);
   const startOf = (b: Booking) => istDateTime(b.date, b.start_time).getTime();
+  const done = (b: Booking) => (isConfirmation ? confirmationDone(b) : !!b.whatsapp_reminder_sent_at);
+  const sentAt = (b: Booking) => (isConfirmation ? (confirmationDone(b) ? b.whatsapp_confirmation_sent_at : null) : b.whatsapp_reminder_sent_at);
 
   const searchLower = searchTerm.toLowerCase();
   const matches = (b: Booking) =>
     !searchTerm || !!b.name?.toLowerCase().includes(searchLower) || b.phone_number.includes(searchTerm);
 
-  // Confirmation: every upcoming or in-progress booking; reminder: only the next 24h
-  const inScope = bookings.filter((b) => b.status === "confirmed" && !isBookingTimePassed(b.date, b.end_time)).filter((b) =>
-    isConfirmation ? true : isWithin24HoursBeforeBooking(b.date, b.start_time, b.end_time)
-  );
-  const pendingCount = inScope.filter((b) => !sentAt(b)).length;
-  const sentCount = inScope.filter((b) => sentAt(b)).length;
-
-  // Confirmation order: current hour first (e.g. 4:30 pm -> 4-5 pm), then later ones, then missed earlier ones
-  const HOUR = 60 * 60 * 1000;
-  const istHourStart = Math.floor((Date.now() + 5.5 * HOUR) / HOUR) * HOUR - 5.5 * HOUR;
-  const hourEnd = istHourStart + HOUR;
-  const hourLabel = `${formatTime(new Date(istHourStart + 5.5 * HOUR).toISOString().slice(11, 16))} – ${formatTime(
-    new Date(hourEnd + 5.5 * HOUR).toISOString().slice(11, 16)
-  )}`;
+  // Confirmation: every upcoming booking (new/changed/cancelled); a cancellation only matters if the customer was confirmed earlier.
+  // Reminder: confirmed bookings in the next 24h.
+  const inScope = bookings.filter((b) => {
+    if (isBookingTimePassed(b.date, b.end_time)) return false;
+    if (!isConfirmation) return b.status === "confirmed" && isWithin24HoursBeforeBooking(b.date, b.start_time, b.end_time);
+    if (b.status === "cancelled") return !!b.whatsapp_confirmation_sent_at;
+    return b.status === "confirmed";
+  });
+  const pendingCount = inScope.filter((b) => !done(b)).length;
+  const sentCount = inScope.filter((b) => done(b)).length;
 
   const visible = inScope.filter(matches);
-  const toSend = visible.filter((b) => !sentAt(b));
+  const toSend = visible.filter((b) => !done(b));
+  // Confirmation queue: oldest booking/change/cancellation first. Reminders: by session start.
+  const order = (a: Booking, b: Booking) => (isConfirmation ? eventTime(a) - eventTime(b) : startOf(a) - startOf(b));
   const groups: { title: string; hint?: string; items: Booking[] }[] =
     activeTab === "sent"
-      ? [{ title: "", items: visible.filter((b) => sentAt(b)).sort((a, b) => startOf(b) - startOf(a)) }]
-      : isConfirmation
-        ? [
-            { title: `This hour · ${hourLabel}`, items: toSend.filter((b) => startOf(b) < hourEnd) },
-            { title: "Upcoming", items: toSend.filter((b) => startOf(b) >= hourEnd).sort((a, b) => startOf(a) - startOf(b)) },
-          ]
-        : [{ title: "", items: toSend.sort((a, b) => startOf(a) - startOf(b)) }];
+      ? [{ title: "", items: visible.filter(done).sort((a, b) => order(b, a)) }]
+      : [{ title: "", items: toSend.sort(order) }];
   const shown = groups.reduce((n, g) => n + g.items.length, 0);
 
   const tab = (active: boolean) =>
@@ -627,7 +535,7 @@ See you soon!`;
     }`;
 
   const row = (booking: Booking) => {
-    const sent = !!sentAt(booking);
+    const sent = done(booking);
     const hoursUntil = getHoursUntilBooking(booking.date, booking.start_time);
     const started = hasEventStarted(booking.date, booking.start_time);
     const isUrgent = !isConfirmation && hoursUntil <= 4 && !sent;
@@ -652,6 +560,13 @@ See you soon!`;
           <div className="min-w-0">
             <p className="font-semibold truncate">
               {booking.name || "Unknown"}
+              {isConfirmation && (
+                <span className={`ml-2 align-middle px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                  kindOf(booking) === "cancelled" ? "bg-red-400/15 text-red-300" : kindOf(booking) === "changed" ? "bg-amber-400/15 text-amber-300" : "bg-emerald-400/15 text-emerald-300"
+                }`}>
+                  {{ new: "New", changed: "Changed", cancelled: "Cancelled" }[kindOf(booking)]}
+                </span>
+              )}
               {isUrgent && (
                 <span className="ml-2 align-middle px-1.5 py-0.5 rounded bg-amber-400/15 text-amber-300 text-[11px] font-medium">Urgent</span>
               )}
@@ -665,6 +580,11 @@ See you soon!`;
             <p className="text-zinc-200 tabular-nums">
               {formatDate(booking.date)} · {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
             </p>
+            {isConfirmation && (
+              <p className="text-xs text-zinc-500 tabular-nums">
+                {{ new: "Booked", changed: "Changed", cancelled: "Cancelled" }[kindOf(booking)]} at {new Date(eventTime(booking)).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}
+              </p>
+            )}
             <p className="text-zinc-400 truncate">
               {booking.studio}
               {booking.session_type ? ` · ${booking.session_type}` : ""}
@@ -676,7 +596,7 @@ See you soon!`;
           {sent && (
             <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300 mr-1">
               <CheckCircle className="w-3.5 h-3.5" />
-              {isConfirmation ? "Confirmation sent" : "Reminder sent"}
+              {isConfirmation ? "Message sent" : "Reminder sent"}
             </span>
           )}
           <button
@@ -693,7 +613,7 @@ See you soon!`;
             }`}
           >
             {sent ? <Send className="w-4 h-4" /> : isConfirmation ? <BadgeCheck className="w-4 h-4" /> : <MessageCircle className="w-4 h-4" />}
-            {sent ? "Send again" : isConfirmation ? "Send confirmation" : "Send reminder"}
+            {sent ? "Send again" : isConfirmation ? `Send ${{ new: "confirmation", changed: "change", cancelled: "cancellation" }[kindOf(booking)]}` : "Send reminder"}
           </button>
         </div>
       </li>

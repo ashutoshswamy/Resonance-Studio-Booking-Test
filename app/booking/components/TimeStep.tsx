@@ -25,6 +25,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { optionChip } from "./optionStyles";
 import { getStudioRate } from "../utils/studioSuggestion";
 import { addDaysYMD, todayIST } from "@/lib/ist";
+import { dateLong } from "@/lib/whatsapp";
 
 interface AvailableSlot extends TimeSlot {
   available: boolean;
@@ -68,6 +69,17 @@ export default function TimeStep() {
     Record<StudioName, number>
   >({} as Record<StudioName, number>);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const startRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  // Bring the next choice into view so the customer does not miss it below the fold.
+  const slabKey = selectedSlab ? `${selectedSlab.start}-${selectedSlab.end}` : "";
+  useEffect(() => {
+    if (slabKey && !startTime) startRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [slabKey, startTime]);
+  useEffect(() => {
+    if (startTime && !endTime) endRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [startTime, endTime]);
 
   // Fetch booking settings on component mount
   useEffect(() => {
@@ -533,12 +545,12 @@ export default function TimeStep() {
         {!draft.isEditMode && (
           <Alert>
             <AlertCircle className="text-primary" />
-            <AlertTitle>How to select your time</AlertTitle>
-            <AlertDescription className="text-xs">
+            <AlertTitle>How to Select Your Time Slot</AlertTitle>
+            <AlertDescription className="text-sm font-medium text-foreground">
               <ol className="list-decimal list-inside space-y-0.5">
-                <li>Select an available time slot</li>
-                <li>Choose your preferred start time</li>
-                <li>Choose your preferred end time</li>
+                <li>Choose your preferred date first</li>
+                <li>Then select the studio</li>
+                <li>Select a time slot, then your start time and end time</li>
               </ol>
             </AlertDescription>
           </Alert>
@@ -591,22 +603,8 @@ export default function TimeStep() {
           />
         </div>
 
-        {date && (
-          <Alert className={loading ? "border-primary/40" : "border-emerald-500/40"}>
-            {loading ? <Loader2 className="animate-spin text-primary" /> : <CheckCircle2 className="text-emerald-400" />}
-            <AlertTitle>Check availability</AlertTitle>
-            <AlertDescription className="text-xs">
-              {loading
-                ? `Checking available slots for ${formatDate(date)}...`
-                : error
-                  ? "Availability could not be checked. Please try again."
-                  : `Showing available time slots for ${formatDate(date)}.`}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Studio selector - only when several studios fit */}
-        {draft.allowedStudios.length > 1 && (
+        {/* Studio selector - all three always shown, unsuitable ones faded */}
+        {(
           <div className="space-y-1.5">
             <Label className={sectionLabel}>
               <Building2 className="size-3" /> Studio
@@ -617,14 +615,15 @@ export default function TimeStep() {
               onValueChange={(v) => v && handleStudioChange(v as StudioName)}
               className="flex-wrap gap-1.5"
             >
-              {draft.allowedStudios.map((studio) => {
+              {(["Studio C", "Studio B", "Studio A"] as StudioName[]).map((studio) => {
+                const notAllowed = !draft.allowedStudios.includes(studio);
                 const hasNoSlots = !!date && studioAvailability[studio] === 0;
                 return (
                   <ToggleGroupItem
                     key={studio}
                     value={studio}
-                    disabled={hasNoSlots}
-                    className={optionChip}
+                    disabled={hasNoSlots || notAllowed}
+                    className={`${optionChip} disabled:opacity-40`}
                   >
                     {studio.replace("Studio ", "")}
                     <span className="opacity-70">₹{getStudioRateForDisplay(studio)}/hr</span>
@@ -658,6 +657,17 @@ export default function TimeStep() {
           </div>
         )}
 
+        {date && !loading && !error && (
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              Showing available time slots for {dateLong(date).replace(",", "")} for {selectedStudio}
+            </p>
+            <p className="text-sm text-foreground">
+              Note: If the displayed time slots do not suit you, simply change the Date and/or Studio, the available time slots will update automatically
+            </p>
+          </div>
+        )}
+
         {loading && (
           <div className="flex items-center justify-center gap-2 py-4 text-xs text-muted-foreground">
             <Spinner className="text-primary" /> Checking availability...
@@ -675,7 +685,7 @@ export default function TimeStep() {
         {date && !loading && !error && (
           <div className="space-y-1.5">
             <Label className={sectionLabel}>
-              <Clock className="size-3" /> Select from available time slots below
+              <Clock className="size-3" /> Select Time Slot: Pick your desired time slot from the list below
             </Label>
             {continuousSlabs.length === 0 ? (
               <p className="text-center py-2 text-muted-foreground text-xs">No available slots</p>
@@ -703,9 +713,9 @@ export default function TimeStep() {
 
         {/* Step 2: start */}
         {selectedSlab && (
-          <div className="space-y-1.5">
+          <div ref={startRef} className="space-y-1.5 scroll-mt-4">
             <Label className={sectionLabel}>
-              <Clock className="size-3" /> Step 2: Select start time
+              <Clock className="size-3" /> Select start time
             </Label>
             <ToggleGroup
               type="single"
@@ -731,9 +741,9 @@ export default function TimeStep() {
 
         {/* Step 3: end */}
         {startTime && (
-          <div className="space-y-1.5">
+          <div ref={endRef} className="space-y-1.5 scroll-mt-4">
             <Label className={sectionLabel}>
-              <Clock className="size-3" /> Step 3: Select end time
+              <Clock className="size-3" /> Select end time
             </Label>
             <ToggleGroup
               type="single"
