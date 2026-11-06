@@ -92,7 +92,8 @@ function StaffPhoneStep() {
   // Check if user exists when phone number is complete
   const checkExistingUser = useCallback(
     async (phoneDigits: string) => {
-      if (mode === "customer") return;
+      // Edit mode: name comes from the booking; lookup would wipe it for non-registered phones.
+      if (mode === "customer" || draft.isEditMode) return;
       if (phoneDigits.length !== 10) {
         setUserChecked(false);
         setIsExistingUser(false);
@@ -132,7 +133,7 @@ function StaffPhoneStep() {
         setUserChecked(true);
       }
     },
-    [updateDraft, mode]
+    [updateDraft, mode, draft.isEditMode]
   );
 
   useEffect(() => {
